@@ -1,4 +1,4 @@
-module Main exposing (main)
+module Main exposing (main, calculate)
 
 import Css
 import Date exposing (Date)
