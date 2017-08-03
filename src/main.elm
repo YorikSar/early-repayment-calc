@@ -2,6 +2,7 @@ module Main exposing (main)
 
 import Css
 import Date exposing (Date)
+import Date.Extra
 import DateTimePicker
 import DateTimePicker.Css
 import Html exposing (Html)
@@ -23,6 +24,8 @@ type alias Model =
     , debt : Maybe Float
     , desired_sum : Maybe Float
     , rate : Maybe Float
+    , result : Maybe Float
+    , intermediate_results : Maybe { r : Float, b : Float, x : Float, d1 : Float, d2 : Float, k1 : Float, k2 : Float, t : Float }
     }
 
 
@@ -37,6 +40,8 @@ init =
       , debt = Nothing
       , desired_sum = Nothing
       , rate = Nothing
+      , result = Nothing
+      , intermediate_results = Nothing
       }
     , Cmd.batch
         [ DateTimePicker.initialCmd PrevDateChange DateTimePicker.initialState
@@ -69,6 +74,54 @@ stringToMaybeFloat str =
             Nothing
 
 
+calculate model =
+    -- this is like map6
+    case ( model.prev_date, model.next_date, model.early_date, model.debt, model.desired_sum, model.rate ) of
+        ( Just prev_date, Just next_date, Just early_date, Just debt, Just desired_sum, Just rate ) ->
+            let
+                r =
+                    rate / 36500
+
+                b =
+                    debt
+
+                x =
+                    desired_sum
+
+                d1 =
+                    toFloat (Date.Extra.diff Date.Extra.Day prev_date early_date)
+
+                d2 =
+                    toFloat (Date.Extra.diff Date.Extra.Day early_date next_date)
+
+                k1 =
+                    d1 * r * b
+
+                k2 =
+                    d2 * r * (b - x + k1) / (1 - d2 * r)
+
+                t =
+                    x - k2
+            in
+                { model
+                    | result = Just t
+                    , intermediate_results =
+                        Just
+                            { r = r
+                            , b = b
+                            , x = x
+                            , d1 = d1
+                            , d2 = d2
+                            , k1 = k1
+                            , k2 = k2
+                            , t = t
+                            }
+                }
+
+        _ ->
+            { model | result = Nothing }
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
@@ -92,7 +145,7 @@ update msg model =
                 RateChange rateStr ->
                     { model | rate = stringToMaybeFloat rateStr }
     in
-        ( newModel, Cmd.none )
+        ( calculate newModel, Cmd.none )
 
 
 { id, class, classList } =
@@ -137,6 +190,47 @@ view model =
                 , Html.label []
                     [ Html.text "Desired total payment in this month:"
                     , plainInput DesiredSumChange
+                    ]
+                , Html.text
+                    (case model.result of
+                        Just result ->
+                            "You should pay: " ++ (toString result)
+
+                        Nothing ->
+                            ""
+                    )
+                , Html.pre []
+                    [ Html.text
+                        (case model.intermediate_results of
+                            Just results ->
+                                "R = "
+                                    ++ (toString results.r)
+                                    ++ "\n"
+                                    ++ "B = "
+                                    ++ (toString results.b)
+                                    ++ "\n"
+                                    ++ "X = "
+                                    ++ (toString results.x)
+                                    ++ "\n"
+                                    ++ "d1 = "
+                                    ++ (toString results.d1)
+                                    ++ "\n"
+                                    ++ "d2 = "
+                                    ++ (toString results.d2)
+                                    ++ "\n"
+                                    ++ "K1 = "
+                                    ++ (toString results.k1)
+                                    ++ "\n"
+                                    ++ "K2 = "
+                                    ++ (toString results.k2)
+                                    ++ "\n"
+                                    ++ "T = "
+                                    ++ (toString results.t)
+                                    ++ "\n"
+
+                            Nothing ->
+                                ""
+                        )
                     ]
                 ]
             ]
