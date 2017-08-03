@@ -74,52 +74,54 @@ stringToMaybeFloat str =
             Nothing
 
 
-calculate model =
-    -- this is like map6
-    case ( model.prev_date, model.next_date, model.early_date, model.debt, model.desired_sum, model.rate ) of
-        ( Just prev_date, Just next_date, Just early_date, Just debt, Just desired_sum, Just rate ) ->
-            let
-                r =
-                    rate / 36500
-
-                b =
-                    debt
-
-                x =
-                    desired_sum
-
-                d1 =
-                    toFloat (Date.Extra.diff Date.Extra.Day prev_date early_date)
-
-                d2 =
-                    toFloat (Date.Extra.diff Date.Extra.Day early_date next_date)
-
-                k1 =
-                    d1 * r * b
-
-                k2 =
-                    d2 * r * (b - x + k1) / (1 - d2 * r)
-
-                t =
-                    x - k2
-            in
-                { model
-                    | result = Just t
-                    , intermediate_results =
-                        Just
-                            { r = r
-                            , b = b
-                            , x = x
-                            , d1 = d1
-                            , d2 = d2
-                            , k1 = k1
-                            , k2 = k2
-                            , t = t
-                            }
-                }
+maybeMap6 : (a -> b -> c -> d -> e -> f -> value) -> Maybe a -> Maybe b -> Maybe c -> Maybe d -> Maybe e -> Maybe f -> Maybe value
+maybeMap6 func ma mb mc md me mf =
+    case ( ma, mb, mc, md, me, mf ) of
+        ( Just a, Just b, Just c, Just d, Just e, Just f ) ->
+            Just (func a b c d e f)
 
         _ ->
-            { model | result = Nothing }
+            Nothing
+
+
+calculate prev_date next_date early_date debt desired_sum rate =
+    let
+        r =
+            rate / 36500
+
+        b =
+            debt
+
+        x =
+            desired_sum
+
+        d1 =
+            toFloat (Date.Extra.diff Date.Extra.Day prev_date early_date)
+
+        d2 =
+            toFloat (Date.Extra.diff Date.Extra.Day early_date next_date)
+
+        k1 =
+            d1 * r * b
+
+        k2 =
+            d2 * r * (b - x + k1) / (1 - d2 * r)
+
+        t =
+            x - k2
+    in
+        { result = t
+        , intermediate_results =
+            { r = r
+            , b = b
+            , x = x
+            , d1 = d1
+            , d2 = d2
+            , k1 = k1
+            , k2 = k2
+            , t = t
+            }
+        }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -144,8 +146,19 @@ update msg model =
 
                 RateChange rateStr ->
                     { model | rate = stringToMaybeFloat rateStr }
+
+        calcResult =
+            maybeMap6 calculate model.prev_date model.next_date model.early_date model.debt model.desired_sum model.rate
+
+        modelWithResult =
+            case calcResult of
+                Nothing ->
+                    { newModel | result = Nothing, intermediate_results = Nothing }
+
+                Just { result, intermediate_results } ->
+                    { newModel | result = Just result, intermediate_results = Just intermediate_results }
     in
-        ( calculate newModel, Cmd.none )
+        ( modelWithResult, Cmd.none )
 
 
 { id, class, classList } =
