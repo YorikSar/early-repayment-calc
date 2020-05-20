@@ -3,13 +3,14 @@ module Main exposing (calculate, main)
 import Browser
 import Date exposing (Date)
 import DatePicker
-import Html exposing (Html)
+import Html
 import Html.Events
 import Maybe
 
 
+main : Program () Model Msg
 main =
-    Browser.document { init = init, update = update, view = view, subscriptions = subscriptions }
+    Browser.document { init = init, update = update, view = view, subscriptions = \_ -> Sub.none }
 
 
 type alias Model =
@@ -23,7 +24,7 @@ type alias Model =
     , desired_sum : Maybe Float
     , rate : Maybe Float
     , result : Maybe Float
-    , intermediate_results : Maybe { r : Float, b : Float, x : Float, d1 : Float, d2 : Float, k1 : Float, k2 : Float, t : Float }
+    , intermediate_results : Maybe IntermediateResults
     }
 
 
@@ -59,11 +60,6 @@ init _ =
     )
 
 
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    Sub.none
-
-
 type Msg
     = PrevDateMsg DatePicker.Msg
     | NextDateMsg DatePicker.Msg
@@ -78,6 +74,19 @@ maybeMap6 func ma mb mc md me mf =
     Maybe.andThen (\a -> Maybe.map5 (func a) mb mc md me mf) ma
 
 
+type alias IntermediateResults =
+    { r : Float
+    , b : Float
+    , x : Float
+    , d1 : Float
+    , d2 : Float
+    , k1 : Float
+    , k2 : Float
+    , t : Float
+    }
+
+
+calculate : Date -> Date -> Date -> Float -> Float -> Float -> { result : Float, intermediate_results : IntermediateResults }
 calculate prev_date next_date early_date debt desired_sum rate =
     let
         r =
@@ -191,6 +200,7 @@ update msg model =
     ( modelWithResult, Cmd.none )
 
 
+plainInput : (String -> Msg) -> Html.Html Msg
 plainInput event =
     Html.div [] [ Html.input [ Html.Events.onInput event ] [] ]
 
