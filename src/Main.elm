@@ -134,6 +134,14 @@ handlePicker msg date state =
     )
 
 
+stringToFloat : String -> Maybe Float
+stringToFloat s =
+    s
+        |> String.replace " " ""
+        |> String.replace "," "."
+        |> String.toFloat
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
@@ -161,13 +169,13 @@ update msg model =
                     { model | early_date = date, early_date_state = state }
 
                 DebtChange debtStr ->
-                    { model | debt = String.toFloat debtStr }
+                    { model | debt = stringToFloat debtStr }
 
                 DesiredSumChange desiredSumStr ->
-                    { model | desired_sum = String.toFloat desiredSumStr }
+                    { model | desired_sum = stringToFloat desiredSumStr }
 
                 RateChange rateStr ->
-                    { model | rate = String.toFloat rateStr }
+                    { model | rate = stringToFloat rateStr }
 
         calcResult =
             maybeMap6 calculate model.prev_date model.next_date model.early_date model.debt model.desired_sum model.rate

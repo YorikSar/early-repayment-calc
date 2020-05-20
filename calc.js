@@ -7475,7 +7475,22 @@ var $author$project$Main$maybeMap6 = F7(
 			ma);
 	});
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $elm$core$String$replace = F3(
+	function (before, after, string) {
+		return A2(
+			$elm$core$String$join,
+			after,
+			A2($elm$core$String$split, before, string));
+	});
 var $elm$core$String$toFloat = _String_toFloat;
+var $author$project$Main$stringToFloat = function (s) {
+	return $elm$core$String$toFloat(
+		A3(
+			$elm$core$String$replace,
+			',',
+			'.',
+			A3($elm$core$String$replace, ' ', '', s)));
+};
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		var newModel = function () {
@@ -7509,21 +7524,21 @@ var $author$project$Main$update = F2(
 					return _Utils_update(
 						model,
 						{
-							debt: $elm$core$String$toFloat(debtStr)
+							debt: $author$project$Main$stringToFloat(debtStr)
 						});
 				case 'DesiredSumChange':
 					var desiredSumStr = msg.a;
 					return _Utils_update(
 						model,
 						{
-							desired_sum: $elm$core$String$toFloat(desiredSumStr)
+							desired_sum: $author$project$Main$stringToFloat(desiredSumStr)
 						});
 				default:
 					var rateStr = msg.a;
 					return _Utils_update(
 						model,
 						{
-							rate: $elm$core$String$toFloat(rateStr)
+							rate: $author$project$Main$stringToFloat(rateStr)
 						});
 			}
 		}();
