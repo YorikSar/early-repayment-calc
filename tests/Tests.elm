@@ -1,14 +1,14 @@
 module Tests exposing (..)
 
-import Main
 import Date
-import Date.Extra
 import Expect
-import Test exposing (Test, test, describe)
+import Main
+import Test exposing (Test, describe, test)
+import Time
 
 
 getDate y m d =
-    Date.Extra.fromParts y m d 0 0 0 0
+    Date.fromCalendarDate y m d
 
 
 suite : Test
@@ -19,12 +19,12 @@ suite =
                 let
                     { result, intermediate_results } =
                         Main.calculate
-                            (getDate 2017 Date.Jul 1)
-                            (getDate 2017 Date.Jul 31)
-                            (getDate 2017 Date.Jul 29)
+                            (getDate 2017 Time.Jul 1)
+                            (getDate 2017 Time.Jul 31)
+                            (getDate 2017 Time.Jul 29)
                             1000000
                             40000
                             36.5
                 in
-                    Expect.equal (floor (result * 100)) 3802004
+                Expect.equal (floor (result * 100)) 3802004
         ]
