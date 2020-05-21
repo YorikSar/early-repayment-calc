@@ -15,21 +15,21 @@ main =
 
 
 type alias Model =
-    { prev_date : Maybe Date
-    , prev_date_str : String
-    , prev_date_state : DatePicker.Model
-    , next_date : Maybe Date
-    , next_date_str : String
-    , next_date_state : DatePicker.Model
-    , early_date : Maybe Date
-    , early_date_str : String
-    , early_date_state : DatePicker.Model
+    { prevDate : Maybe Date
+    , prevDateStr : String
+    , prevDateState : DatePicker.Model
+    , nextDate : Maybe Date
+    , nextDateStr : String
+    , nextDateState : DatePicker.Model
+    , earlyDate : Maybe Date
+    , earlyDateStr : String
+    , earlyDateState : DatePicker.Model
     , debt : Maybe Float
-    , debt_str : String
-    , desired_sum : Maybe Float
-    , desired_sum_str : String
+    , debtStr : String
+    , desiredSum : Maybe Float
+    , desiredSumStr : String
     , rate : Maybe Float
-    , rate_str : String
+    , rateStr : String
     , result : Maybe Float
     , intermediate_results : Maybe IntermediateResults
     }
@@ -37,21 +37,21 @@ type alias Model =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { prev_date = Nothing
-      , prev_date_str = ""
-      , prev_date_state = DatePicker.init
-      , next_date = Nothing
-      , next_date_str = ""
-      , next_date_state = DatePicker.init
-      , early_date = Nothing
-      , early_date_str = ""
-      , early_date_state = DatePicker.init
+    ( { prevDate = Nothing
+      , prevDateStr = ""
+      , prevDateState = DatePicker.init
+      , nextDate = Nothing
+      , nextDateStr = ""
+      , nextDateState = DatePicker.init
+      , earlyDate = Nothing
+      , earlyDateStr = ""
+      , earlyDateState = DatePicker.init
       , debt = Nothing
-      , debt_str = ""
-      , desired_sum = Nothing
-      , desired_sum_str = ""
+      , debtStr = ""
+      , desiredSum = Nothing
+      , desiredSumStr = ""
       , rate = Nothing
-      , rate_str = ""
+      , rateStr = ""
       , result = Nothing
       , intermediate_results = Nothing
       }
@@ -87,7 +87,7 @@ type alias IntermediateResults =
 
 
 calculate : Date -> Date -> Date -> Float -> Float -> Float -> { result : Float, intermediate_results : IntermediateResults }
-calculate prev_date next_date early_date debt desired_sum rate =
+calculate prevDate nextDate earlyDate debt desiredSum rate =
     let
         r =
             rate / 36500
@@ -96,13 +96,13 @@ calculate prev_date next_date early_date debt desired_sum rate =
             debt
 
         x =
-            desired_sum
+            desiredSum
 
         d1 =
-            toFloat (Date.diff Date.Days prev_date early_date)
+            toFloat (Date.diff Date.Days prevDate earlyDate)
 
         d2 =
-            toFloat (Date.diff Date.Days early_date next_date)
+            toFloat (Date.diff Date.Days earlyDate nextDate)
 
         k1 =
             d1 * r * b
@@ -169,45 +169,45 @@ update msg model =
             case msg of
                 SetToday date ->
                     { model
-                        | prev_date_state = DatePicker.setToday date model.prev_date_state
-                        , next_date_state = DatePicker.setToday date model.next_date_state
-                        , early_date_state = DatePicker.setToday date model.early_date_state
-                        , early_date = Just date
-                        , early_date_str = Date.toIsoString date
+                        | prevDateState = DatePicker.setToday date model.prevDateState
+                        , nextDateState = DatePicker.setToday date model.nextDateState
+                        , earlyDateState = DatePicker.setToday date model.earlyDateState
+                        , earlyDate = Just date
+                        , earlyDateStr = Date.toIsoString date
                     }
 
                 PrevDateMsg dateMsg ->
                     let
                         ( date, state, text ) =
-                            handlePicker dateMsg model.prev_date model.prev_date_state model.prev_date_str
+                            handlePicker dateMsg model.prevDate model.prevDateState model.prevDateStr
                     in
-                    { model | prev_date = date, prev_date_state = state, prev_date_str = text }
+                    { model | prevDate = date, prevDateState = state, prevDateStr = text }
 
                 NextDateMsg dateMsg ->
                     let
                         ( date, state, text ) =
-                            handlePicker dateMsg model.next_date model.next_date_state model.next_date_str
+                            handlePicker dateMsg model.nextDate model.nextDateState model.nextDateStr
                     in
-                    { model | next_date = date, next_date_state = state, next_date_str = text }
+                    { model | nextDate = date, nextDateState = state, nextDateStr = text }
 
                 EarlyDateMsg dateMsg ->
                     let
                         ( date, state, text ) =
-                            handlePicker dateMsg model.early_date model.early_date_state model.early_date_str
+                            handlePicker dateMsg model.earlyDate model.earlyDateState model.earlyDateStr
                     in
-                    { model | early_date = date, early_date_state = state, early_date_str = text }
+                    { model | earlyDate = date, earlyDateState = state, earlyDateStr = text }
 
                 DebtChange debtStr ->
-                    { model | debt = stringToFloat debtStr, debt_str = debtStr }
+                    { model | debt = stringToFloat debtStr, debtStr = debtStr }
 
                 DesiredSumChange desiredSumStr ->
-                    { model | desired_sum = stringToFloat desiredSumStr, desired_sum_str = desiredSumStr }
+                    { model | desiredSum = stringToFloat desiredSumStr, desiredSumStr = desiredSumStr }
 
                 RateChange rateStr ->
-                    { model | rate = stringToFloat rateStr, rate_str = rateStr }
+                    { model | rate = stringToFloat rateStr, rateStr = rateStr }
 
         calcResult =
-            maybeMap6 calculate model.prev_date model.next_date model.early_date model.debt model.desired_sum model.rate
+            maybeMap6 calculate model.prevDate model.nextDate model.earlyDate model.debt model.desiredSum model.rate
 
         modelWithResult =
             case calcResult of
@@ -250,12 +250,12 @@ view model =
         [ Element.layout [] <|
             Element.column
                 [ Element.centerX, Element.centerY, Element.spacing 10 ]
-                [ plainInput "Loan body:" model.debt_str DebtChange
-                , plainInput "Yearly rate:" model.rate_str RateChange
-                , datepicker "Previous payment date:" model.prev_date model.prev_date_state model.prev_date_str PrevDateMsg
-                , datepicker "Next payment date:" model.next_date model.next_date_state model.next_date_str NextDateMsg
-                , datepicker "Desired early payment date:" model.early_date model.early_date_state model.early_date_str EarlyDateMsg
-                , plainInput "Desired total payment in this month:" model.desired_sum_str DesiredSumChange
+                [ plainInput "Loan body:" model.debtStr DebtChange
+                , plainInput "Yearly rate:" model.rateStr RateChange
+                , datepicker "Previous payment date:" model.prevDate model.prevDateState model.prevDateStr PrevDateMsg
+                , datepicker "Next payment date:" model.nextDate model.nextDateState model.nextDateStr NextDateMsg
+                , datepicker "Desired early payment date:" model.earlyDate model.earlyDateState model.earlyDateStr EarlyDateMsg
+                , plainInput "Desired total payment in this month:" model.desiredSumStr DesiredSumChange
                 , Element.text
                     (case model.result of
                         Just result ->

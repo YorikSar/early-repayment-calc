@@ -5608,7 +5608,7 @@ var $elm$time$Time$now = _Time_now($elm$time$Time$millisToPosix);
 var $justinmimbs$date$Date$today = A3($elm$core$Task$map2, $justinmimbs$date$Date$fromPosix, $elm$time$Time$here, $elm$time$Time$now);
 var $author$project$Main$init = function (_v0) {
 	return _Utils_Tuple2(
-		{debt: $elm$core$Maybe$Nothing, debt_str: '', desired_sum: $elm$core$Maybe$Nothing, desired_sum_str: '', early_date: $elm$core$Maybe$Nothing, early_date_state: $fabhof$elm_ui_datepicker$DatePicker$init, early_date_str: '', intermediate_results: $elm$core$Maybe$Nothing, next_date: $elm$core$Maybe$Nothing, next_date_state: $fabhof$elm_ui_datepicker$DatePicker$init, next_date_str: '', prev_date: $elm$core$Maybe$Nothing, prev_date_state: $fabhof$elm_ui_datepicker$DatePicker$init, prev_date_str: '', rate: $elm$core$Maybe$Nothing, rate_str: '', result: $elm$core$Maybe$Nothing},
+		{debt: $elm$core$Maybe$Nothing, debtStr: '', desiredSum: $elm$core$Maybe$Nothing, desiredSumStr: '', earlyDate: $elm$core$Maybe$Nothing, earlyDateState: $fabhof$elm_ui_datepicker$DatePicker$init, earlyDateStr: '', intermediate_results: $elm$core$Maybe$Nothing, nextDate: $elm$core$Maybe$Nothing, nextDateState: $fabhof$elm_ui_datepicker$DatePicker$init, nextDateStr: '', prevDate: $elm$core$Maybe$Nothing, prevDateState: $fabhof$elm_ui_datepicker$DatePicker$init, prevDateStr: '', rate: $elm$core$Maybe$Nothing, rateStr: '', result: $elm$core$Maybe$Nothing},
 		A2($elm$core$Task$perform, $author$project$Main$SetToday, $justinmimbs$date$Date$today));
 };
 var $elm$core$Platform$Sub$batch = _Platform_batch;
@@ -5751,11 +5751,11 @@ var $justinmimbs$date$Date$diff = F3(
 		}
 	});
 var $author$project$Main$calculate = F6(
-	function (prev_date, next_date, early_date, debt, desired_sum, rate) {
-		var x = desired_sum;
+	function (prevDate, nextDate, earlyDate, debt, desiredSum, rate) {
+		var x = desiredSum;
 		var r = rate / 36500;
-		var d2 = A3($justinmimbs$date$Date$diff, $justinmimbs$date$Date$Days, early_date, next_date);
-		var d1 = A3($justinmimbs$date$Date$diff, $justinmimbs$date$Date$Days, prev_date, early_date);
+		var d2 = A3($justinmimbs$date$Date$diff, $justinmimbs$date$Date$Days, earlyDate, nextDate);
+		var d1 = A3($justinmimbs$date$Date$diff, $justinmimbs$date$Date$Days, prevDate, earlyDate);
 		var b = debt;
 		var k1 = (d1 * r) * b;
 		var k2 = ((d2 * r) * ((b - x) + k1)) / (1 - (d2 * r));
@@ -7308,54 +7308,54 @@ var $author$project$Main$update = F2(
 					return _Utils_update(
 						model,
 						{
-							early_date: $elm$core$Maybe$Just(date),
-							early_date_state: A2($fabhof$elm_ui_datepicker$DatePicker$setToday, date, model.early_date_state),
-							early_date_str: $justinmimbs$date$Date$toIsoString(date),
-							next_date_state: A2($fabhof$elm_ui_datepicker$DatePicker$setToday, date, model.next_date_state),
-							prev_date_state: A2($fabhof$elm_ui_datepicker$DatePicker$setToday, date, model.prev_date_state)
+							earlyDate: $elm$core$Maybe$Just(date),
+							earlyDateState: A2($fabhof$elm_ui_datepicker$DatePicker$setToday, date, model.earlyDateState),
+							earlyDateStr: $justinmimbs$date$Date$toIsoString(date),
+							nextDateState: A2($fabhof$elm_ui_datepicker$DatePicker$setToday, date, model.nextDateState),
+							prevDateState: A2($fabhof$elm_ui_datepicker$DatePicker$setToday, date, model.prevDateState)
 						});
 				case 'PrevDateMsg':
 					var dateMsg = msg.a;
-					var _v2 = A4($author$project$Main$handlePicker, dateMsg, model.prev_date, model.prev_date_state, model.prev_date_str);
+					var _v2 = A4($author$project$Main$handlePicker, dateMsg, model.prevDate, model.prevDateState, model.prevDateStr);
 					var date = _v2.a;
 					var state = _v2.b;
 					var text = _v2.c;
 					return _Utils_update(
 						model,
-						{prev_date: date, prev_date_state: state, prev_date_str: text});
+						{prevDate: date, prevDateState: state, prevDateStr: text});
 				case 'NextDateMsg':
 					var dateMsg = msg.a;
-					var _v3 = A4($author$project$Main$handlePicker, dateMsg, model.next_date, model.next_date_state, model.next_date_str);
+					var _v3 = A4($author$project$Main$handlePicker, dateMsg, model.nextDate, model.nextDateState, model.nextDateStr);
 					var date = _v3.a;
 					var state = _v3.b;
 					var text = _v3.c;
 					return _Utils_update(
 						model,
-						{next_date: date, next_date_state: state, next_date_str: text});
+						{nextDate: date, nextDateState: state, nextDateStr: text});
 				case 'EarlyDateMsg':
 					var dateMsg = msg.a;
-					var _v4 = A4($author$project$Main$handlePicker, dateMsg, model.early_date, model.early_date_state, model.early_date_str);
+					var _v4 = A4($author$project$Main$handlePicker, dateMsg, model.earlyDate, model.earlyDateState, model.earlyDateStr);
 					var date = _v4.a;
 					var state = _v4.b;
 					var text = _v4.c;
 					return _Utils_update(
 						model,
-						{early_date: date, early_date_state: state, early_date_str: text});
+						{earlyDate: date, earlyDateState: state, earlyDateStr: text});
 				case 'DebtChange':
 					var debtStr = msg.a;
 					return _Utils_update(
 						model,
 						{
 							debt: $author$project$Main$stringToFloat(debtStr),
-							debt_str: debtStr
+							debtStr: debtStr
 						});
 				case 'DesiredSumChange':
 					var desiredSumStr = msg.a;
 					return _Utils_update(
 						model,
 						{
-							desired_sum: $author$project$Main$stringToFloat(desiredSumStr),
-							desired_sum_str: desiredSumStr
+							desiredSum: $author$project$Main$stringToFloat(desiredSumStr),
+							desiredSumStr: desiredSumStr
 						});
 				default:
 					var rateStr = msg.a;
@@ -7363,11 +7363,11 @@ var $author$project$Main$update = F2(
 						model,
 						{
 							rate: $author$project$Main$stringToFloat(rateStr),
-							rate_str: rateStr
+							rateStr: rateStr
 						});
 			}
 		}();
-		var calcResult = A7($author$project$Main$maybeMap6, $author$project$Main$calculate, model.prev_date, model.next_date, model.early_date, model.debt, model.desired_sum, model.rate);
+		var calcResult = A7($author$project$Main$maybeMap6, $author$project$Main$calculate, model.prevDate, model.nextDate, model.earlyDate, model.debt, model.desiredSum, model.rate);
 		var modelWithResult = function () {
 			if (calcResult.$ === 'Nothing') {
 				return _Utils_update(
@@ -15489,12 +15489,12 @@ var $author$project$Main$view = function (model) {
 						]),
 					_List_fromArray(
 						[
-							A3($author$project$Main$plainInput, 'Loan body:', model.debt_str, $author$project$Main$DebtChange),
-							A3($author$project$Main$plainInput, 'Yearly rate:', model.rate_str, $author$project$Main$RateChange),
-							A5($author$project$Main$datepicker, 'Previous payment date:', model.prev_date, model.prev_date_state, model.prev_date_str, $author$project$Main$PrevDateMsg),
-							A5($author$project$Main$datepicker, 'Next payment date:', model.next_date, model.next_date_state, model.next_date_str, $author$project$Main$NextDateMsg),
-							A5($author$project$Main$datepicker, 'Desired early payment date:', model.early_date, model.early_date_state, model.early_date_str, $author$project$Main$EarlyDateMsg),
-							A3($author$project$Main$plainInput, 'Desired total payment in this month:', model.desired_sum_str, $author$project$Main$DesiredSumChange),
+							A3($author$project$Main$plainInput, 'Loan body:', model.debtStr, $author$project$Main$DebtChange),
+							A3($author$project$Main$plainInput, 'Yearly rate:', model.rateStr, $author$project$Main$RateChange),
+							A5($author$project$Main$datepicker, 'Previous payment date:', model.prevDate, model.prevDateState, model.prevDateStr, $author$project$Main$PrevDateMsg),
+							A5($author$project$Main$datepicker, 'Next payment date:', model.nextDate, model.nextDateState, model.nextDateStr, $author$project$Main$NextDateMsg),
+							A5($author$project$Main$datepicker, 'Desired early payment date:', model.earlyDate, model.earlyDateState, model.earlyDateStr, $author$project$Main$EarlyDateMsg),
+							A3($author$project$Main$plainInput, 'Desired total payment in this month:', model.desiredSumStr, $author$project$Main$DesiredSumChange),
 							$mdgriffith$elm_ui$Element$text(
 							function () {
 								var _v0 = model.result;
