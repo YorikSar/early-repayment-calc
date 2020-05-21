@@ -15,15 +15,9 @@ main =
 
 
 type alias Model =
-    { prevDate : Maybe Date
-    , prevDateStr : String
-    , prevDateState : DatePicker.Model
-    , nextDate : Maybe Date
-    , nextDateStr : String
-    , nextDateState : DatePicker.Model
-    , earlyDate : Maybe Date
-    , earlyDateStr : String
-    , earlyDateState : DatePicker.Model
+    { prev : DatePicker
+    , next : DatePicker
+    , early : DatePicker
     , debt : Maybe Float
     , debtStr : String
     , desiredSum : Maybe Float
@@ -35,17 +29,36 @@ type alias Model =
     }
 
 
+type alias DatePicker =
+    { date : Maybe Date
+    , text : String
+    , state : DatePicker.Model
+    }
+
+
+initDatePicker : DatePicker
+initDatePicker =
+    { date = Nothing
+    , text = ""
+    , state = DatePicker.init
+    }
+
+
+type Msg
+    = PrevDateMsg DatePicker.ChangeEvent
+    | NextDateMsg DatePicker.ChangeEvent
+    | EarlyDateMsg DatePicker.ChangeEvent
+    | DebtChange String
+    | DesiredSumChange String
+    | RateChange String
+    | SetToday Date
+
+
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { prevDate = Nothing
-      , prevDateStr = ""
-      , prevDateState = DatePicker.init
-      , nextDate = Nothing
-      , nextDateStr = ""
-      , nextDateState = DatePicker.init
-      , earlyDate = Nothing
-      , earlyDateStr = ""
-      , earlyDateState = DatePicker.init
+    ( { prev = initDatePicker
+      , next = initDatePicker
+      , early = initDatePicker
       , debt = Nothing
       , debtStr = ""
       , desiredSum = Nothing
@@ -57,16 +70,6 @@ init _ =
       }
     , Task.perform SetToday Date.today
     )
-
-
-type Msg
-    = PrevDateMsg DatePicker.ChangeEvent
-    | NextDateMsg DatePicker.ChangeEvent
-    | EarlyDateMsg DatePicker.ChangeEvent
-    | DebtChange String
-    | DesiredSumChange String
-    | RateChange String
-    | SetToday Date
 
 
 maybeMap6 : (a -> b -> c -> d -> e -> f -> value) -> Maybe a -> Maybe b -> Maybe c -> Maybe d -> Maybe e -> Maybe f -> Maybe value
@@ -127,31 +130,36 @@ calculate prevDate nextDate earlyDate debt desiredSum rate =
     }
 
 
-handlePicker : DatePicker.ChangeEvent -> Maybe Date -> DatePicker.Model -> String -> ( Maybe Date, DatePicker.Model, String )
-handlePicker msg date state text =
+updateDatePicker : DatePicker.ChangeEvent -> DatePicker -> DatePicker
+updateDatePicker msg dp =
     case msg of
         DatePicker.DateChanged newDate ->
-            ( Just newDate
-            , state
-            , Date.toIsoString newDate
-            )
+            { dp
+                | date = Just newDate
+                , text = Date.toIsoString newDate
+            }
 
         DatePicker.TextChanged newText ->
-            ( case Date.fromIsoString newText of
-                Ok newDate ->
-                    Just newDate
+            { dp
+                | date =
+                    case Date.fromIsoString newText of
+                        Ok newDate ->
+                            Just newDate
 
-                Err _ ->
-                    date
-            , state
-            , newText
-            )
+                        Err _ ->
+                            dp.date
+                , text = newText
+            }
 
         DatePicker.PickerChanged subMsg ->
-            ( date
-            , state |> DatePicker.update subMsg
-            , text
-            )
+            { dp
+                | state = dp.state |> DatePicker.update subMsg
+            }
+
+
+setToday : Date -> DatePicker -> DatePicker
+setToday date dp =
+    { dp | state = DatePicker.setToday date dp.state }
 
 
 stringToFloat : String -> Maybe Float
@@ -169,33 +177,19 @@ update msg model =
             case msg of
                 SetToday date ->
                     { model
-                        | prevDateState = DatePicker.setToday date model.prevDateState
-                        , nextDateState = DatePicker.setToday date model.nextDateState
-                        , earlyDateState = DatePicker.setToday date model.earlyDateState
-                        , earlyDate = Just date
-                        , earlyDateStr = Date.toIsoString date
+                        | prev = setToday date model.prev
+                        , next = setToday date model.next
+                        , early = setToday date model.early |> updateDatePicker (DatePicker.DateChanged date)
                     }
 
                 PrevDateMsg dateMsg ->
-                    let
-                        ( date, state, text ) =
-                            handlePicker dateMsg model.prevDate model.prevDateState model.prevDateStr
-                    in
-                    { model | prevDate = date, prevDateState = state, prevDateStr = text }
+                    { model | prev = updateDatePicker dateMsg model.prev }
 
                 NextDateMsg dateMsg ->
-                    let
-                        ( date, state, text ) =
-                            handlePicker dateMsg model.nextDate model.nextDateState model.nextDateStr
-                    in
-                    { model | nextDate = date, nextDateState = state, nextDateStr = text }
+                    { model | next = updateDatePicker dateMsg model.next }
 
                 EarlyDateMsg dateMsg ->
-                    let
-                        ( date, state, text ) =
-                            handlePicker dateMsg model.earlyDate model.earlyDateState model.earlyDateStr
-                    in
-                    { model | earlyDate = date, earlyDateState = state, earlyDateStr = text }
+                    { model | early = updateDatePicker dateMsg model.early }
 
                 DebtChange debtStr ->
                     { model | debt = stringToFloat debtStr, debtStr = debtStr }
@@ -207,7 +201,7 @@ update msg model =
                     { model | rate = stringToFloat rateStr, rateStr = rateStr }
 
         calcResult =
-            maybeMap6 calculate model.prevDate model.nextDate model.earlyDate model.debt model.desiredSum model.rate
+            maybeMap6 calculate model.prev.date model.next.date model.early.date model.debt model.desiredSum model.rate
 
         modelWithResult =
             case calcResult of
@@ -230,15 +224,15 @@ plainInput label value msg =
         }
 
 
-datepicker : String -> Maybe Date -> DatePicker.Model -> String -> (DatePicker.ChangeEvent -> Msg) -> Element.Element Msg
-datepicker label date state text msg =
+datepicker : String -> DatePicker -> (DatePicker.ChangeEvent -> Msg) -> Element.Element Msg
+datepicker label dp msg =
     DatePicker.input []
         { onChange = msg
-        , selected = date
-        , text = text
+        , selected = dp.date
+        , text = dp.text
         , label = Element.Input.labelAbove [] <| Element.text label
         , placeholder = Nothing
-        , model = state
+        , model = dp.state
         , settings = DatePicker.defaultSettings
         }
 
@@ -252,9 +246,9 @@ view model =
                 [ Element.centerX, Element.centerY, Element.spacing 10 ]
                 [ plainInput "Loan body:" model.debtStr DebtChange
                 , plainInput "Yearly rate:" model.rateStr RateChange
-                , datepicker "Previous payment date:" model.prevDate model.prevDateState model.prevDateStr PrevDateMsg
-                , datepicker "Next payment date:" model.nextDate model.nextDateState model.nextDateStr NextDateMsg
-                , datepicker "Desired early payment date:" model.earlyDate model.earlyDateState model.earlyDateStr EarlyDateMsg
+                , datepicker "Previous payment date:" model.prev PrevDateMsg
+                , datepicker "Next payment date:" model.next NextDateMsg
+                , datepicker "Desired early payment date:" model.early EarlyDateMsg
                 , plainInput "Desired total payment in this month:" model.desiredSumStr DesiredSumChange
                 , Element.text
                     (case model.result of

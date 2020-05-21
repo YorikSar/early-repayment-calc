@@ -5396,6 +5396,7 @@ var $fabhof$elm_ui_datepicker$DatePicker$init = $fabhof$elm_ui_datepicker$DatePi
 		today: A2($justinmimbs$date$Date$fromOrdinalDate, 1, 1),
 		visibleMonth: A2($justinmimbs$date$Date$fromOrdinalDate, 1, 1)
 	});
+var $author$project$Main$initDatePicker = {date: $elm$core$Maybe$Nothing, state: $fabhof$elm_ui_datepicker$DatePicker$init, text: ''};
 var $justinmimbs$date$Date$daysBeforeMonth = F2(
 	function (y, m) {
 		var leapDays = $justinmimbs$date$Date$isLeapYear(y) ? 1 : 0;
@@ -5608,11 +5609,14 @@ var $elm$time$Time$now = _Time_now($elm$time$Time$millisToPosix);
 var $justinmimbs$date$Date$today = A3($elm$core$Task$map2, $justinmimbs$date$Date$fromPosix, $elm$time$Time$here, $elm$time$Time$now);
 var $author$project$Main$init = function (_v0) {
 	return _Utils_Tuple2(
-		{debt: $elm$core$Maybe$Nothing, debtStr: '', desiredSum: $elm$core$Maybe$Nothing, desiredSumStr: '', earlyDate: $elm$core$Maybe$Nothing, earlyDateState: $fabhof$elm_ui_datepicker$DatePicker$init, earlyDateStr: '', intermediate_results: $elm$core$Maybe$Nothing, nextDate: $elm$core$Maybe$Nothing, nextDateState: $fabhof$elm_ui_datepicker$DatePicker$init, nextDateStr: '', prevDate: $elm$core$Maybe$Nothing, prevDateState: $fabhof$elm_ui_datepicker$DatePicker$init, prevDateStr: '', rate: $elm$core$Maybe$Nothing, rateStr: '', result: $elm$core$Maybe$Nothing},
+		{debt: $elm$core$Maybe$Nothing, debtStr: '', desiredSum: $elm$core$Maybe$Nothing, desiredSumStr: '', early: $author$project$Main$initDatePicker, intermediate_results: $elm$core$Maybe$Nothing, next: $author$project$Main$initDatePicker, prev: $author$project$Main$initDatePicker, rate: $elm$core$Maybe$Nothing, rateStr: '', result: $elm$core$Maybe$Nothing},
 		A2($elm$core$Task$perform, $author$project$Main$SetToday, $justinmimbs$date$Date$today));
 };
 var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
+var $fabhof$elm_ui_datepicker$DatePicker$DateChanged = function (a) {
+	return {$: 'DateChanged', a: a};
+};
 var $justinmimbs$date$Date$Days = {$: 'Days'};
 var $justinmimbs$date$Date$monthToNumber = function (m) {
 	switch (m.$) {
@@ -5765,6 +5769,95 @@ var $author$project$Main$calculate = F6(
 			result: t
 		};
 	});
+var $elm$core$Maybe$andThen = F2(
+	function (callback, maybeValue) {
+		if (maybeValue.$ === 'Just') {
+			var value = maybeValue.a;
+			return callback(value);
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
+	});
+var $elm$core$Maybe$map5 = F6(
+	function (func, ma, mb, mc, md, me) {
+		if (ma.$ === 'Nothing') {
+			return $elm$core$Maybe$Nothing;
+		} else {
+			var a = ma.a;
+			if (mb.$ === 'Nothing') {
+				return $elm$core$Maybe$Nothing;
+			} else {
+				var b = mb.a;
+				if (mc.$ === 'Nothing') {
+					return $elm$core$Maybe$Nothing;
+				} else {
+					var c = mc.a;
+					if (md.$ === 'Nothing') {
+						return $elm$core$Maybe$Nothing;
+					} else {
+						var d = md.a;
+						if (me.$ === 'Nothing') {
+							return $elm$core$Maybe$Nothing;
+						} else {
+							var e = me.a;
+							return $elm$core$Maybe$Just(
+								A5(func, a, b, c, d, e));
+						}
+					}
+				}
+			}
+		}
+	});
+var $author$project$Main$maybeMap6 = F7(
+	function (func, ma, mb, mc, md, me, mf) {
+		return A2(
+			$elm$core$Maybe$andThen,
+			function (a) {
+				return A6(
+					$elm$core$Maybe$map5,
+					func(a),
+					mb,
+					mc,
+					md,
+					me,
+					mf);
+			},
+			ma);
+	});
+var $elm$core$Platform$Cmd$batch = _Platform_batch;
+var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $fabhof$elm_ui_datepicker$DatePicker$setToday = F2(
+	function (today, _v0) {
+		var picker = _v0.a;
+		return $fabhof$elm_ui_datepicker$DatePicker$Model(
+			_Utils_update(
+				picker,
+				{today: today, visibleMonth: today}));
+	});
+var $author$project$Main$setToday = F2(
+	function (date, dp) {
+		return _Utils_update(
+			dp,
+			{
+				state: A2($fabhof$elm_ui_datepicker$DatePicker$setToday, date, dp.state)
+			});
+	});
+var $elm$core$String$replace = F3(
+	function (before, after, string) {
+		return A2(
+			$elm$core$String$join,
+			after,
+			A2($elm$core$String$split, before, string));
+	});
+var $elm$core$String$toFloat = _String_toFloat;
+var $author$project$Main$stringToFloat = function (s) {
+	return $elm$core$String$toFloat(
+		A3(
+			$elm$core$String$replace,
+			',',
+			'.',
+			A3($elm$core$String$replace, ' ', '', s)));
+};
 var $elm$core$Basics$always = F2(
 	function (a, _v0) {
 		return a;
@@ -7187,118 +7280,42 @@ var $fabhof$elm_ui_datepicker$DatePicker$update = F2(
 				return $fabhof$elm_ui_datepicker$DatePicker$Model(picker);
 		}
 	});
-var $author$project$Main$handlePicker = F4(
-	function (msg, date, state, text) {
+var $author$project$Main$updateDatePicker = F2(
+	function (msg, dp) {
 		switch (msg.$) {
 			case 'DateChanged':
 				var newDate = msg.a;
-				return _Utils_Tuple3(
-					$elm$core$Maybe$Just(newDate),
-					state,
-					$justinmimbs$date$Date$toIsoString(newDate));
+				return _Utils_update(
+					dp,
+					{
+						date: $elm$core$Maybe$Just(newDate),
+						text: $justinmimbs$date$Date$toIsoString(newDate)
+					});
 			case 'TextChanged':
 				var newText = msg.a;
-				return _Utils_Tuple3(
-					function () {
-						var _v1 = $justinmimbs$date$Date$fromIsoString(newText);
-						if (_v1.$ === 'Ok') {
-							var newDate = _v1.a;
-							return $elm$core$Maybe$Just(newDate);
-						} else {
-							return date;
-						}
-					}(),
-					state,
-					newText);
+				return _Utils_update(
+					dp,
+					{
+						date: function () {
+							var _v1 = $justinmimbs$date$Date$fromIsoString(newText);
+							if (_v1.$ === 'Ok') {
+								var newDate = _v1.a;
+								return $elm$core$Maybe$Just(newDate);
+							} else {
+								return dp.date;
+							}
+						}(),
+						text: newText
+					});
 			default:
 				var subMsg = msg.a;
-				return _Utils_Tuple3(
-					date,
-					A2($fabhof$elm_ui_datepicker$DatePicker$update, subMsg, state),
-					text);
+				return _Utils_update(
+					dp,
+					{
+						state: A2($fabhof$elm_ui_datepicker$DatePicker$update, subMsg, dp.state)
+					});
 		}
 	});
-var $elm$core$Maybe$andThen = F2(
-	function (callback, maybeValue) {
-		if (maybeValue.$ === 'Just') {
-			var value = maybeValue.a;
-			return callback(value);
-		} else {
-			return $elm$core$Maybe$Nothing;
-		}
-	});
-var $elm$core$Maybe$map5 = F6(
-	function (func, ma, mb, mc, md, me) {
-		if (ma.$ === 'Nothing') {
-			return $elm$core$Maybe$Nothing;
-		} else {
-			var a = ma.a;
-			if (mb.$ === 'Nothing') {
-				return $elm$core$Maybe$Nothing;
-			} else {
-				var b = mb.a;
-				if (mc.$ === 'Nothing') {
-					return $elm$core$Maybe$Nothing;
-				} else {
-					var c = mc.a;
-					if (md.$ === 'Nothing') {
-						return $elm$core$Maybe$Nothing;
-					} else {
-						var d = md.a;
-						if (me.$ === 'Nothing') {
-							return $elm$core$Maybe$Nothing;
-						} else {
-							var e = me.a;
-							return $elm$core$Maybe$Just(
-								A5(func, a, b, c, d, e));
-						}
-					}
-				}
-			}
-		}
-	});
-var $author$project$Main$maybeMap6 = F7(
-	function (func, ma, mb, mc, md, me, mf) {
-		return A2(
-			$elm$core$Maybe$andThen,
-			function (a) {
-				return A6(
-					$elm$core$Maybe$map5,
-					func(a),
-					mb,
-					mc,
-					md,
-					me,
-					mf);
-			},
-			ma);
-	});
-var $elm$core$Platform$Cmd$batch = _Platform_batch;
-var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
-var $fabhof$elm_ui_datepicker$DatePicker$setToday = F2(
-	function (today, _v0) {
-		var picker = _v0.a;
-		return $fabhof$elm_ui_datepicker$DatePicker$Model(
-			_Utils_update(
-				picker,
-				{today: today, visibleMonth: today}));
-	});
-var $elm$core$String$replace = F3(
-	function (before, after, string) {
-		return A2(
-			$elm$core$String$join,
-			after,
-			A2($elm$core$String$split, before, string));
-	});
-var $elm$core$String$toFloat = _String_toFloat;
-var $author$project$Main$stringToFloat = function (s) {
-	return $elm$core$String$toFloat(
-		A3(
-			$elm$core$String$replace,
-			',',
-			'.',
-			A3($elm$core$String$replace, ' ', '', s)));
-};
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		var newModel = function () {
@@ -7308,39 +7325,34 @@ var $author$project$Main$update = F2(
 					return _Utils_update(
 						model,
 						{
-							earlyDate: $elm$core$Maybe$Just(date),
-							earlyDateState: A2($fabhof$elm_ui_datepicker$DatePicker$setToday, date, model.earlyDateState),
-							earlyDateStr: $justinmimbs$date$Date$toIsoString(date),
-							nextDateState: A2($fabhof$elm_ui_datepicker$DatePicker$setToday, date, model.nextDateState),
-							prevDateState: A2($fabhof$elm_ui_datepicker$DatePicker$setToday, date, model.prevDateState)
+							early: A2(
+								$author$project$Main$updateDatePicker,
+								$fabhof$elm_ui_datepicker$DatePicker$DateChanged(date),
+								A2($author$project$Main$setToday, date, model.early)),
+							next: A2($author$project$Main$setToday, date, model.next),
+							prev: A2($author$project$Main$setToday, date, model.prev)
 						});
 				case 'PrevDateMsg':
 					var dateMsg = msg.a;
-					var _v2 = A4($author$project$Main$handlePicker, dateMsg, model.prevDate, model.prevDateState, model.prevDateStr);
-					var date = _v2.a;
-					var state = _v2.b;
-					var text = _v2.c;
 					return _Utils_update(
 						model,
-						{prevDate: date, prevDateState: state, prevDateStr: text});
+						{
+							prev: A2($author$project$Main$updateDatePicker, dateMsg, model.prev)
+						});
 				case 'NextDateMsg':
 					var dateMsg = msg.a;
-					var _v3 = A4($author$project$Main$handlePicker, dateMsg, model.nextDate, model.nextDateState, model.nextDateStr);
-					var date = _v3.a;
-					var state = _v3.b;
-					var text = _v3.c;
 					return _Utils_update(
 						model,
-						{nextDate: date, nextDateState: state, nextDateStr: text});
+						{
+							next: A2($author$project$Main$updateDatePicker, dateMsg, model.next)
+						});
 				case 'EarlyDateMsg':
 					var dateMsg = msg.a;
-					var _v4 = A4($author$project$Main$handlePicker, dateMsg, model.earlyDate, model.earlyDateState, model.earlyDateStr);
-					var date = _v4.a;
-					var state = _v4.b;
-					var text = _v4.c;
 					return _Utils_update(
 						model,
-						{earlyDate: date, earlyDateState: state, earlyDateStr: text});
+						{
+							early: A2($author$project$Main$updateDatePicker, dateMsg, model.early)
+						});
 				case 'DebtChange':
 					var debtStr = msg.a;
 					return _Utils_update(
@@ -7367,7 +7379,7 @@ var $author$project$Main$update = F2(
 						});
 			}
 		}();
-		var calcResult = A7($author$project$Main$maybeMap6, $author$project$Main$calculate, model.prevDate, model.nextDate, model.earlyDate, model.debt, model.desiredSum, model.rate);
+		var calcResult = A7($author$project$Main$maybeMap6, $author$project$Main$calculate, model.prev.date, model.next.date, model.early.date, model.debt, model.desiredSum, model.rate);
 		var modelWithResult = function () {
 			if (calcResult.$ === 'Nothing') {
 				return _Utils_update(
@@ -13851,9 +13863,6 @@ var $fabhof$elm_ui_datepicker$Internal$Week$calendarWeekDays = F2(
 				A2($fabhof$elm_ui_datepicker$Internal$Date$formatMaybeLanguage, maybeLanguage, 'EEEEEE'),
 				days));
 	});
-var $fabhof$elm_ui_datepicker$DatePicker$DateChanged = function (a) {
-	return {$: 'DateChanged', a: a};
-};
 var $fabhof$elm_ui_datepicker$Internal$TestHelper$dayInMonthAttrHtml = $fabhof$elm_ui_datepicker$Internal$TestHelper$testAttribute('dayInMonth');
 var $fabhof$elm_ui_datepicker$Internal$TestHelper$dayInMonthAttr = $mdgriffith$elm_ui$Element$htmlAttribute($fabhof$elm_ui_datepicker$Internal$TestHelper$dayInMonthAttrHtml);
 var $fabhof$elm_ui_datepicker$Internal$TestHelper$selectedAttrHtml = $fabhof$elm_ui_datepicker$Internal$TestHelper$testAttribute('selected');
@@ -15183,8 +15192,8 @@ var $mdgriffith$elm_ui$Element$Input$Label = F3(
 		return {$: 'Label', a: a, b: b, c: c};
 	});
 var $mdgriffith$elm_ui$Element$Input$labelAbove = $mdgriffith$elm_ui$Element$Input$Label($mdgriffith$elm_ui$Element$Input$Above);
-var $author$project$Main$datepicker = F5(
-	function (label, date, state, text, msg) {
+var $author$project$Main$datepicker = F3(
+	function (label, dp, msg) {
 		return A2(
 			$fabhof$elm_ui_datepicker$DatePicker$input,
 			_List_Nil,
@@ -15193,12 +15202,12 @@ var $author$project$Main$datepicker = F5(
 					$mdgriffith$elm_ui$Element$Input$labelAbove,
 					_List_Nil,
 					$mdgriffith$elm_ui$Element$text(label)),
-				model: state,
+				model: dp.state,
 				onChange: msg,
 				placeholder: $elm$core$Maybe$Nothing,
-				selected: date,
+				selected: dp.date,
 				settings: $fabhof$elm_ui_datepicker$DatePicker$defaultSettings,
-				text: text
+				text: dp.text
 			});
 	});
 var $mdgriffith$elm_ui$Internal$Model$OnlyDynamic = F2(
@@ -15491,9 +15500,9 @@ var $author$project$Main$view = function (model) {
 						[
 							A3($author$project$Main$plainInput, 'Loan body:', model.debtStr, $author$project$Main$DebtChange),
 							A3($author$project$Main$plainInput, 'Yearly rate:', model.rateStr, $author$project$Main$RateChange),
-							A5($author$project$Main$datepicker, 'Previous payment date:', model.prevDate, model.prevDateState, model.prevDateStr, $author$project$Main$PrevDateMsg),
-							A5($author$project$Main$datepicker, 'Next payment date:', model.nextDate, model.nextDateState, model.nextDateStr, $author$project$Main$NextDateMsg),
-							A5($author$project$Main$datepicker, 'Desired early payment date:', model.earlyDate, model.earlyDateState, model.earlyDateStr, $author$project$Main$EarlyDateMsg),
+							A3($author$project$Main$datepicker, 'Previous payment date:', model.prev, $author$project$Main$PrevDateMsg),
+							A3($author$project$Main$datepicker, 'Next payment date:', model.next, $author$project$Main$NextDateMsg),
+							A3($author$project$Main$datepicker, 'Desired early payment date:', model.early, $author$project$Main$EarlyDateMsg),
 							A3($author$project$Main$plainInput, 'Desired total payment in this month:', model.desiredSumStr, $author$project$Main$DesiredSumChange),
 							$mdgriffith$elm_ui$Element$text(
 							function () {
