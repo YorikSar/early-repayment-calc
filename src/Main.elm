@@ -3,9 +3,10 @@ module Main exposing (calculate, main)
 import Browser
 import Date exposing (Date)
 import DatePicker
-import Html
-import Html.Events
+import Element
+import Element.Input
 import Maybe
+import Task
 
 
 main : Program () Model Msg
@@ -15,14 +16,20 @@ main =
 
 type alias Model =
     { prev_date : Maybe Date
-    , prev_date_state : DatePicker.DatePicker
+    , prev_date_str : String
+    , prev_date_state : DatePicker.Model
     , next_date : Maybe Date
-    , next_date_state : DatePicker.DatePicker
+    , next_date_str : String
+    , next_date_state : DatePicker.Model
     , early_date : Maybe Date
-    , early_date_state : DatePicker.DatePicker
+    , early_date_str : String
+    , early_date_state : DatePicker.Model
     , debt : Maybe Float
+    , debt_str : String
     , desired_sum : Maybe Float
+    , desired_sum_str : String
     , rate : Maybe Float
+    , rate_str : String
     , result : Maybe Float
     , intermediate_results : Maybe IntermediateResults
     }
@@ -30,43 +37,36 @@ type alias Model =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    let
-        ( prev_date_state, prev_date_init_cmd ) =
-            DatePicker.init
-
-        ( next_date_state, next_date_init_cmd ) =
-            DatePicker.init
-
-        ( early_date_state, early_date_init_cmd ) =
-            DatePicker.init
-    in
     ( { prev_date = Nothing
-      , prev_date_state = prev_date_state
+      , prev_date_str = ""
+      , prev_date_state = DatePicker.init
       , next_date = Nothing
-      , next_date_state = next_date_state
+      , next_date_str = ""
+      , next_date_state = DatePicker.init
       , early_date = Nothing
-      , early_date_state = early_date_state
+      , early_date_str = ""
+      , early_date_state = DatePicker.init
       , debt = Nothing
+      , debt_str = ""
       , desired_sum = Nothing
+      , desired_sum_str = ""
       , rate = Nothing
+      , rate_str = ""
       , result = Nothing
       , intermediate_results = Nothing
       }
-    , Cmd.batch
-        [ Cmd.map PrevDateMsg prev_date_init_cmd
-        , Cmd.map NextDateMsg next_date_init_cmd
-        , Cmd.map EarlyDateMsg early_date_init_cmd
-        ]
+    , Task.perform SetToday Date.today
     )
 
 
 type Msg
-    = PrevDateMsg DatePicker.Msg
-    | NextDateMsg DatePicker.Msg
-    | EarlyDateMsg DatePicker.Msg
+    = PrevDateMsg DatePicker.ChangeEvent
+    | NextDateMsg DatePicker.ChangeEvent
+    | EarlyDateMsg DatePicker.ChangeEvent
     | DebtChange String
     | DesiredSumChange String
     | RateChange String
+    | SetToday Date
 
 
 maybeMap6 : (a -> b -> c -> d -> e -> f -> value) -> Maybe a -> Maybe b -> Maybe c -> Maybe d -> Maybe e -> Maybe f -> Maybe value
@@ -127,20 +127,31 @@ calculate prev_date next_date early_date debt desired_sum rate =
     }
 
 
-handlePicker : DatePicker.Msg -> Maybe Date -> DatePicker.DatePicker -> ( DatePicker.DatePicker, Maybe Date )
-handlePicker msg date state =
-    let
-        ( newState, dateEvent ) =
-            DatePicker.update DatePicker.defaultSettings msg state
-    in
-    ( newState
-    , case dateEvent of
-        DatePicker.Picked newDate ->
-            Just newDate
+handlePicker : DatePicker.ChangeEvent -> Maybe Date -> DatePicker.Model -> String -> ( Maybe Date, DatePicker.Model, String )
+handlePicker msg date state text =
+    case msg of
+        DatePicker.DateChanged newDate ->
+            ( Just newDate
+            , state
+            , Date.toIsoString newDate
+            )
 
-        _ ->
-            date
-    )
+        DatePicker.TextChanged newText ->
+            ( case Date.fromIsoString newText of
+                Ok newDate ->
+                    Just newDate
+
+                Err _ ->
+                    date
+            , state
+            , newText
+            )
+
+        DatePicker.PickerChanged subMsg ->
+            ( date
+            , state |> DatePicker.update subMsg
+            , text
+            )
 
 
 stringToFloat : String -> Maybe Float
@@ -156,35 +167,44 @@ update msg model =
     let
         newModel =
             case msg of
+                SetToday date ->
+                    { model
+                        | prev_date_state = DatePicker.setToday date model.prev_date_state
+                        , next_date_state = DatePicker.setToday date model.next_date_state
+                        , early_date_state = DatePicker.setToday date model.early_date_state
+                        , early_date = Just date
+                        , early_date_str = Date.toIsoString date
+                    }
+
                 PrevDateMsg dateMsg ->
                     let
-                        ( state, date ) =
-                            handlePicker dateMsg model.prev_date model.prev_date_state
+                        ( date, state, text ) =
+                            handlePicker dateMsg model.prev_date model.prev_date_state model.prev_date_str
                     in
-                    { model | prev_date = date, prev_date_state = state }
+                    { model | prev_date = date, prev_date_state = state, prev_date_str = text }
 
                 NextDateMsg dateMsg ->
                     let
-                        ( state, date ) =
-                            handlePicker dateMsg model.next_date model.next_date_state
+                        ( date, state, text ) =
+                            handlePicker dateMsg model.next_date model.next_date_state model.next_date_str
                     in
-                    { model | next_date = date, next_date_state = state }
+                    { model | next_date = date, next_date_state = state, next_date_str = text }
 
                 EarlyDateMsg dateMsg ->
                     let
-                        ( state, date ) =
-                            handlePicker dateMsg model.early_date model.early_date_state
+                        ( date, state, text ) =
+                            handlePicker dateMsg model.early_date model.early_date_state model.early_date_str
                     in
-                    { model | early_date = date, early_date_state = state }
+                    { model | early_date = date, early_date_state = state, early_date_str = text }
 
                 DebtChange debtStr ->
-                    { model | debt = stringToFloat debtStr }
+                    { model | debt = stringToFloat debtStr, debt_str = debtStr }
 
                 DesiredSumChange desiredSumStr ->
-                    { model | desired_sum = stringToFloat desiredSumStr }
+                    { model | desired_sum = stringToFloat desiredSumStr, desired_sum_str = desiredSumStr }
 
                 RateChange rateStr ->
-                    { model | rate = stringToFloat rateStr }
+                    { model | rate = stringToFloat rateStr, rate_str = rateStr }
 
         calcResult =
             maybeMap6 calculate model.prev_date model.next_date model.early_date model.debt model.desired_sum model.rate
@@ -200,47 +220,43 @@ update msg model =
     ( modelWithResult, Cmd.none )
 
 
-plainInput : (String -> Msg) -> Html.Html Msg
-plainInput event =
-    Html.div [] [ Html.input [ Html.Events.onInput event ] [] ]
+plainInput : String -> String -> (String -> Msg) -> Element.Element Msg
+plainInput label value msg =
+    Element.Input.text []
+        { onChange = msg
+        , text = value
+        , placeholder = Nothing
+        , label = Element.Input.labelAbove [] <| Element.text label
+        }
+
+
+datepicker : String -> Maybe Date -> DatePicker.Model -> String -> (DatePicker.ChangeEvent -> Msg) -> Element.Element Msg
+datepicker label date state text msg =
+    DatePicker.input []
+        { onChange = msg
+        , selected = date
+        , text = text
+        , label = Element.Input.labelAbove [] <| Element.text label
+        , placeholder = Nothing
+        , model = state
+        , settings = DatePicker.defaultSettings
+        }
 
 
 view : Model -> Browser.Document Msg
 view model =
     { title = "Early Repayment Calc"
     , body =
-        [ Html.form []
-            [ Html.div []
-                [ Html.label []
-                    [ Html.text "Loan body:"
-                    , plainInput DebtChange
-                    ]
-                , Html.br [] []
-                , Html.label []
-                    [ Html.text "Yearly rate:"
-                    , plainInput RateChange
-                    ]
-                , Html.br [] []
-                , Html.label []
-                    [ Html.text "Previous payment date:"
-                    , DatePicker.view model.prev_date DatePicker.defaultSettings model.prev_date_state
-                        |> Html.map PrevDateMsg
-                    ]
-                , Html.label []
-                    [ Html.text "Next payment date:"
-                    , DatePicker.view model.next_date DatePicker.defaultSettings model.next_date_state
-                        |> Html.map NextDateMsg
-                    ]
-                , Html.label []
-                    [ Html.text "Desired early payment date:"
-                    , DatePicker.view model.early_date DatePicker.defaultSettings model.early_date_state
-                        |> Html.map EarlyDateMsg
-                    ]
-                , Html.label []
-                    [ Html.text "Desired total payment in this month:"
-                    , plainInput DesiredSumChange
-                    ]
-                , Html.text
+        [ Element.layout [] <|
+            Element.column
+                [ Element.centerX, Element.centerY, Element.spacing 10 ]
+                [ plainInput "Loan body:" model.debt_str DebtChange
+                , plainInput "Yearly rate:" model.rate_str RateChange
+                , datepicker "Previous payment date:" model.prev_date model.prev_date_state model.prev_date_str PrevDateMsg
+                , datepicker "Next payment date:" model.next_date model.next_date_state model.next_date_str NextDateMsg
+                , datepicker "Desired early payment date:" model.early_date model.early_date_state model.early_date_str EarlyDateMsg
+                , plainInput "Desired total payment in this month:" model.desired_sum_str DesiredSumChange
+                , Element.text
                     (case model.result of
                         Just result ->
                             "You should pay: " ++ String.fromFloat result
@@ -248,40 +264,37 @@ view model =
                         Nothing ->
                             ""
                     )
-                , Html.pre []
-                    [ Html.text
-                        (case model.intermediate_results of
-                            Just results ->
-                                "R = "
-                                    ++ String.fromFloat results.r
-                                    ++ "\n"
-                                    ++ "B = "
-                                    ++ String.fromFloat results.b
-                                    ++ "\n"
-                                    ++ "X = "
-                                    ++ String.fromFloat results.x
-                                    ++ "\n"
-                                    ++ "d1 = "
-                                    ++ String.fromFloat results.d1
-                                    ++ "\n"
-                                    ++ "d2 = "
-                                    ++ String.fromFloat results.d2
-                                    ++ "\n"
-                                    ++ "K1 = "
-                                    ++ String.fromFloat results.k1
-                                    ++ "\n"
-                                    ++ "K2 = "
-                                    ++ String.fromFloat results.k2
-                                    ++ "\n"
-                                    ++ "T = "
-                                    ++ String.fromFloat results.t
-                                    ++ "\n"
+                , Element.text
+                    (case model.intermediate_results of
+                        Just results ->
+                            "R = "
+                                ++ String.fromFloat results.r
+                                ++ "\n"
+                                ++ "B = "
+                                ++ String.fromFloat results.b
+                                ++ "\n"
+                                ++ "X = "
+                                ++ String.fromFloat results.x
+                                ++ "\n"
+                                ++ "d1 = "
+                                ++ String.fromFloat results.d1
+                                ++ "\n"
+                                ++ "d2 = "
+                                ++ String.fromFloat results.d2
+                                ++ "\n"
+                                ++ "K1 = "
+                                ++ String.fromFloat results.k1
+                                ++ "\n"
+                                ++ "K2 = "
+                                ++ String.fromFloat results.k2
+                                ++ "\n"
+                                ++ "T = "
+                                ++ String.fromFloat results.t
+                                ++ "\n"
 
-                            Nothing ->
-                                ""
-                        )
-                    ]
+                        Nothing ->
+                            ""
+                    )
                 ]
-            ]
         ]
     }
