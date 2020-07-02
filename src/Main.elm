@@ -201,7 +201,7 @@ update msg model =
                     { model | rate = stringToFloat rateStr, rateStr = rateStr }
 
         calcResult =
-            maybeMap6 calculate model.prev.date model.next.date model.early.date model.debt model.desiredSum model.rate
+            maybeMap6 calculate newModel.prev.date newModel.next.date newModel.early.date newModel.debt newModel.desiredSum newModel.rate
 
         modelWithResult =
             case calcResult of
