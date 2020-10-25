@@ -14,34 +14,115 @@ main =
     Browser.document { init = init, update = update, view = view, subscriptions = \_ -> Sub.none }
 
 
-type alias Model =
-    { prev : DatePicker
-    , next : DatePicker
-    , early : DatePicker
-    , debt : Maybe Float
-    , debtStr : String
-    , desiredSum : Maybe Float
-    , desiredSumStr : String
-    , rate : Maybe Float
-    , rateStr : String
-    , result : Maybe Float
-    , intermediate_results : Maybe IntermediateResults
+type alias AllValues =
+    { prev : Date
+    , next : Date
+    , early : Date
+    , debt : Float
+    , desiredSum : Float
+    , rate : Float
     }
 
 
+type alias MaybeValues =
+    { prev : Maybe Date
+    , next : Maybe Date
+    , early : Maybe Date
+    , debt : Maybe Float
+    , desiredSum : Maybe Float
+    , rate : Maybe Float
+    }
+
+
+type Values
+    = AllSet AllValues Float IntermediateResults
+    | NotAllSet MaybeValues
+
+
+type alias States =
+    { prev : DatePicker
+    , next : DatePicker
+    , early : DatePicker
+    , debtStr : String
+    , desiredSumStr : String
+    , rateStr : String
+    }
+
+
+type alias Model =
+    { values : Values
+    , states : States
+    }
+
+
+maybeValuesFromValues : Values -> MaybeValues
+maybeValuesFromValues vals =
+    case vals of
+        AllSet v _ _ ->
+            { prev = Just v.prev
+            , next = Just v.next
+            , early = Just v.early
+            , debt = Just v.debt
+            , desiredSum = Just v.desiredSum
+            , rate = Just v.rate
+            }
+
+        NotAllSet v ->
+            v
+
+
+maybeValuesToAllValues : MaybeValues -> Maybe AllValues
+maybeValuesToAllValues v =
+    maybeMap6 AllValues v.prev v.next v.early v.debt v.desiredSum v.rate
+
+
 type alias DatePicker =
-    { date : Maybe Date
-    , text : String
+    { text : String
     , state : DatePicker.Model
     }
 
 
 initDatePicker : DatePicker
 initDatePicker =
-    { date = Nothing
-    , text = ""
+    { text = ""
     , state = DatePicker.init
     }
+
+
+setToday : Date -> DatePicker -> DatePicker
+setToday date dp =
+    { dp | state = DatePicker.setToday date dp.state }
+
+
+updateDatePickerDate : DatePicker.ChangeEvent -> Maybe Date -> Maybe Date
+updateDatePickerDate msg date =
+    case msg of
+        DatePicker.DateChanged newDate ->
+            Just newDate
+
+        DatePicker.TextChanged newText ->
+            case Date.fromIsoString newText of
+                Ok newDate ->
+                    Just newDate
+
+                Err _ ->
+                    date
+
+        DatePicker.PickerChanged subMsg ->
+            date
+
+
+updateDatePicker : DatePicker.ChangeEvent -> DatePicker -> DatePicker
+updateDatePicker msg dp =
+    case msg of
+        DatePicker.DateChanged newDate ->
+            { dp | text = Date.toIsoString newDate }
+
+        DatePicker.TextChanged newText ->
+            { dp | text = newText }
+
+        DatePicker.PickerChanged subMsg ->
+            { dp | state = dp.state |> DatePicker.update subMsg }
 
 
 type Msg
@@ -56,17 +137,15 @@ type Msg
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { prev = initDatePicker
-      , next = initDatePicker
-      , early = initDatePicker
-      , debt = Nothing
-      , debtStr = ""
-      , desiredSum = Nothing
-      , desiredSumStr = ""
-      , rate = Nothing
-      , rateStr = ""
-      , result = Nothing
-      , intermediate_results = Nothing
+    ( { values = NotAllSet (MaybeValues Nothing Nothing Nothing Nothing Nothing Nothing)
+      , states =
+            { prev = initDatePicker
+            , next = initDatePicker
+            , early = initDatePicker
+            , debtStr = ""
+            , desiredSumStr = ""
+            , rateStr = ""
+            }
       }
     , Task.perform SetToday Date.today
     )
@@ -89,8 +168,8 @@ type alias IntermediateResults =
     }
 
 
-calculate : Date -> Date -> Date -> Float -> Float -> Float -> { result : Float, intermediate_results : IntermediateResults }
-calculate prevDate nextDate earlyDate debt desiredSum rate =
+calculate : AllValues -> { result : Float, intermediate_results : IntermediateResults }
+calculate { prev, next, early, debt, desiredSum, rate } =
     let
         r =
             rate / 36500
@@ -102,10 +181,10 @@ calculate prevDate nextDate earlyDate debt desiredSum rate =
             desiredSum
 
         d1 =
-            toFloat (Date.diff Date.Days prevDate earlyDate)
+            toFloat (Date.diff Date.Days prev early)
 
         d2 =
-            toFloat (Date.diff Date.Days earlyDate nextDate)
+            toFloat (Date.diff Date.Days early next)
 
         k1 =
             d1 * r * b
@@ -130,38 +209,6 @@ calculate prevDate nextDate earlyDate debt desiredSum rate =
     }
 
 
-updateDatePicker : DatePicker.ChangeEvent -> DatePicker -> DatePicker
-updateDatePicker msg dp =
-    case msg of
-        DatePicker.DateChanged newDate ->
-            { dp
-                | date = Just newDate
-                , text = Date.toIsoString newDate
-            }
-
-        DatePicker.TextChanged newText ->
-            { dp
-                | date =
-                    case Date.fromIsoString newText of
-                        Ok newDate ->
-                            Just newDate
-
-                        Err _ ->
-                            dp.date
-                , text = newText
-            }
-
-        DatePicker.PickerChanged subMsg ->
-            { dp
-                | state = dp.state |> DatePicker.update subMsg
-            }
-
-
-setToday : Date -> DatePicker -> DatePicker
-setToday date dp =
-    { dp | state = DatePicker.setToday date dp.state }
-
-
 stringToFloat : String -> Maybe Float
 stringToFloat s =
     s
@@ -170,48 +217,87 @@ stringToFloat s =
         |> String.toFloat
 
 
+updateValues : Msg -> MaybeValues -> MaybeValues
+updateValues msg values =
+    case msg of
+        SetToday date ->
+            { values | early = Just date }
+
+        PrevDateMsg dateMsg ->
+            { values | prev = updateDatePickerDate dateMsg values.prev }
+
+        NextDateMsg dateMsg ->
+            { values | next = updateDatePickerDate dateMsg values.next }
+
+        EarlyDateMsg dateMsg ->
+            { values | next = updateDatePickerDate dateMsg values.next }
+
+        DebtChange debtStr ->
+            { values | debt = stringToFloat debtStr }
+
+        DesiredSumChange desiredSumStr ->
+            { values | desiredSum = stringToFloat desiredSumStr }
+
+        RateChange rateStr ->
+            { values | rate = stringToFloat rateStr }
+
+
+updateStates : Msg -> States -> States
+updateStates msg states =
+    case msg of
+        SetToday date ->
+            { states
+                | prev = setToday date states.prev
+                , next = setToday date states.next
+                , early = setToday date states.early |> updateDatePicker (DatePicker.DateChanged date)
+            }
+
+        PrevDateMsg dateMsg ->
+            { states | prev = updateDatePicker dateMsg states.prev }
+
+        NextDateMsg dateMsg ->
+            { states | next = updateDatePicker dateMsg states.next }
+
+        EarlyDateMsg dateMsg ->
+            { states | early = updateDatePicker dateMsg states.early }
+
+        DebtChange debtStr ->
+            { states | debtStr = debtStr }
+
+        DesiredSumChange desiredSumStr ->
+            { states | desiredSumStr = desiredSumStr }
+
+        RateChange rateStr ->
+            { states | rateStr = rateStr }
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
+        values =
+            maybeValuesFromValues model.values
+                |> updateValues msg
+
+        states =
+            updateStates msg model.states
+
         newModel =
-            case msg of
-                SetToday date ->
-                    { model
-                        | prev = setToday date model.prev
-                        , next = setToday date model.next
-                        , early = setToday date model.early |> updateDatePicker (DatePicker.DateChanged date)
+            case maybeValuesToAllValues values of
+                Just allValues ->
+                    let
+                        { result, intermediate_results } =
+                            calculate allValues
+                    in
+                    { values = AllSet allValues result intermediate_results
+                    , states = states
                     }
 
-                PrevDateMsg dateMsg ->
-                    { model | prev = updateDatePicker dateMsg model.prev }
-
-                NextDateMsg dateMsg ->
-                    { model | next = updateDatePicker dateMsg model.next }
-
-                EarlyDateMsg dateMsg ->
-                    { model | early = updateDatePicker dateMsg model.early }
-
-                DebtChange debtStr ->
-                    { model | debt = stringToFloat debtStr, debtStr = debtStr }
-
-                DesiredSumChange desiredSumStr ->
-                    { model | desiredSum = stringToFloat desiredSumStr, desiredSumStr = desiredSumStr }
-
-                RateChange rateStr ->
-                    { model | rate = stringToFloat rateStr, rateStr = rateStr }
-
-        calcResult =
-            maybeMap6 calculate newModel.prev.date newModel.next.date newModel.early.date newModel.debt newModel.desiredSum newModel.rate
-
-        modelWithResult =
-            case calcResult of
                 Nothing ->
-                    { newModel | result = Nothing, intermediate_results = Nothing }
-
-                Just { result, intermediate_results } ->
-                    { newModel | result = Just result, intermediate_results = Just intermediate_results }
+                    { values = NotAllSet values
+                    , states = states
+                    }
     in
-    ( modelWithResult, Cmd.none )
+    ( newModel, Cmd.none )
 
 
 plainInput : String -> String -> (String -> Msg) -> Element.Element Msg
@@ -224,11 +310,11 @@ plainInput label value msg =
         }
 
 
-datepicker : String -> DatePicker -> (DatePicker.ChangeEvent -> Msg) -> Element.Element Msg
-datepicker label dp msg =
+datepicker : String -> Maybe Date -> DatePicker -> (DatePicker.ChangeEvent -> Msg) -> Element.Element Msg
+datepicker label date dp msg =
     DatePicker.input []
         { onChange = msg
-        , selected = dp.date
+        , selected = date
         , text = dp.text
         , label = Element.Input.labelAbove [] <| Element.text label
         , placeholder = Nothing
@@ -244,51 +330,57 @@ view model =
         [ Element.layout [] <|
             Element.column
                 [ Element.centerX, Element.centerY, Element.spacing 10 ]
-                [ plainInput "Loan body:" model.debtStr DebtChange
-                , plainInput "Yearly rate:" model.rateStr RateChange
-                , datepicker "Previous payment date:" model.prev PrevDateMsg
-                , datepicker "Next payment date:" model.next NextDateMsg
-                , datepicker "Desired early payment date:" model.early EarlyDateMsg
-                , plainInput "Desired total payment in this month:" model.desiredSumStr DesiredSumChange
-                , Element.text
-                    (case model.result of
-                        Just result ->
-                            "You should pay: " ++ String.fromFloat result
+                (List.concat
+                    [ [ plainInput "Loan body:" model.states.debtStr DebtChange
+                      , plainInput "Yearly rate:" model.states.rateStr RateChange
+                      ]
+                    , let
+                        { prev, next, early } =
+                            case model.values of
+                                AllSet v _ _ ->
+                                    { prev = Just v.prev, next = Just v.next, early = Just v.early }
 
-                        Nothing ->
-                            ""
-                    )
-                , Element.text
-                    (case model.intermediate_results of
-                        Just results ->
-                            "R = "
-                                ++ String.fromFloat results.r
-                                ++ "\n"
-                                ++ "B = "
-                                ++ String.fromFloat results.b
-                                ++ "\n"
-                                ++ "X = "
-                                ++ String.fromFloat results.x
-                                ++ "\n"
-                                ++ "d1 = "
-                                ++ String.fromFloat results.d1
-                                ++ "\n"
-                                ++ "d2 = "
-                                ++ String.fromFloat results.d2
-                                ++ "\n"
-                                ++ "K1 = "
-                                ++ String.fromFloat results.k1
-                                ++ "\n"
-                                ++ "K2 = "
-                                ++ String.fromFloat results.k2
-                                ++ "\n"
-                                ++ "T = "
-                                ++ String.fromFloat results.t
-                                ++ "\n"
+                                NotAllSet v ->
+                                    { prev = v.prev, next = v.next, early = v.early }
+                      in
+                      [ datepicker "Previous payment date:" prev model.states.prev PrevDateMsg
+                      , datepicker "Next payment date:" next model.states.next NextDateMsg
+                      , datepicker "Desired early payment date:" early model.states.early EarlyDateMsg
+                      ]
+                    , [ plainInput "Desired total payment in this month:" model.states.desiredSumStr DesiredSumChange ]
+                    , case model.values of
+                        NotAllSet _ ->
+                            []
 
-                        Nothing ->
-                            ""
-                    )
-                ]
+                        AllSet _ result ir ->
+                            [ Element.text <| "You should pay: " ++ String.fromFloat result
+                            , Element.text <|
+                                "R = "
+                                    ++ String.fromFloat ir.r
+                                    ++ "\n"
+                                    ++ "B = "
+                                    ++ String.fromFloat ir.b
+                                    ++ "\n"
+                                    ++ "X = "
+                                    ++ String.fromFloat ir.x
+                                    ++ "\n"
+                                    ++ "d1 = "
+                                    ++ String.fromFloat ir.d1
+                                    ++ "\n"
+                                    ++ "d2 = "
+                                    ++ String.fromFloat ir.d2
+                                    ++ "\n"
+                                    ++ "K1 = "
+                                    ++ String.fromFloat ir.k1
+                                    ++ "\n"
+                                    ++ "K2 = "
+                                    ++ String.fromFloat ir.k2
+                                    ++ "\n"
+                                    ++ "T = "
+                                    ++ String.fromFloat ir.t
+                                    ++ "\n"
+                            ]
+                    ]
+                )
         ]
     }
