@@ -7,6 +7,7 @@ import Test exposing (Test, describe, test)
 import Time
 
 
+getDate : Int -> Date.Month -> Int -> Date.Date
 getDate y m d =
     Date.fromCalendarDate y m d
 
